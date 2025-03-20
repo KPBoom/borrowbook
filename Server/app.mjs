@@ -38,7 +38,7 @@ app.post('/borrow', async (req, res) => {
     const { book_id, member_id } = req.body;
 
     try {
-        // ตรวจสอบว่าหนังสือถูกยืมไปแล้วหรือไม่
+        // ตรวจสอบการยืมหนังสือ
         const bookStatus = await connectionPool.query('SELECT status FROM books WHERE book_id = $1', [book_id]);
         if (bookStatus.rows.length === 0) {
             return res.status(404).send('Book not found');
@@ -51,7 +51,7 @@ app.post('/borrow', async (req, res) => {
         const borrowDate = new Date();
         await connectionPool.query('INSERT INTO borrow (book_id, member_id, borrow_date) VALUES ($1, $2, $3)', [book_id, member_id, borrowDate]);
 
-        // อัปเดตสถานะหนังสือ
+        // อัปเดตสถานะหนังสือเป็น Borrowed
         await connectionPool.query('UPDATE books SET status = \'Borrowed\' WHERE book_id = $1', [book_id]);
 
         res.status(201).send('Book borrowed successfully');
@@ -65,7 +65,7 @@ app.post('/return', async (req, res) => {
     const { book_id } = req.body;
 
     try {
-        // ตรวจสอบว่าหนังสือถูกยืมไปหรือไม่
+        // ตรวจสอบวสถานะหนังสือ
         const bookStatus = await connectionPool.query('SELECT status FROM books WHERE book_id = $1', [book_id]);
         if (bookStatus.rows.length === 0) {
             return res.status(404).send('Book not found');
@@ -77,7 +77,7 @@ app.post('/return', async (req, res) => {
         // อัปเดตสถานะหนังสือเป็น Available
         await connectionPool.query('UPDATE books SET status = \'Available\' WHERE book_id = $1', [book_id]);
 
-        // อัปเดต return_date ในตาราง borrow
+        // อัปเดต return_date 
         const returnDate = new Date();
         await connectionPool.query('UPDATE borrow SET return_date = $1 WHERE book_id = $2 AND return_date IS NULL', [returnDate, book_id]);
 
