@@ -16,15 +16,25 @@ app.get('/', (req, res) => {
 app.get('/books', async (req, res) => {
     try {
         const result = await connectionPool.query(`
-            SELECT 
+            SELECT
                 books.book_id,
                 books.title,
                 books.author,
                 books.status,
                 members.name AS borrower_name
             FROM books
-            LEFT JOIN borrow ON books.book_id = borrow.book_id
-            LEFT JOIN members ON borrow.member_id = members.member_id
+            LEFT JOIN (
+                SELECT
+                    borrow.book_id,
+                    borrow.member_id
+                FROM borrow
+                WHERE borrow.borrow_id IN (
+                    SELECT MAX(borrow_id)
+                    FROM borrow
+                    GROUP BY book_id
+                )
+            ) AS latest_borrow ON books.book_id = latest_borrow.book_id
+            LEFT JOIN members ON latest_borrow.member_id = members.member_id;
         `);
 
         res.json(result.rows);
